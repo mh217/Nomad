@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "772765849261",
+    "project_id": "nomad-bfa66",
+    "storage_bucket": "nomad-bfa66.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:772765849261:android:c23674019aba4306519824",
+        "android_client_info": {
+          "package_name": "com.example.nomad"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD79Qtt-6BLQLeDYXrwuRrpIr5t2MRsftw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

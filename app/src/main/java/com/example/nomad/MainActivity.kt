@@ -147,36 +147,55 @@ class MainActivity : ComponentActivity() {
             var arrival by remember { mutableStateOf("") }
             val context = LocalContext.current
 
-
-            currentUser?.let {
-                db.collection("Users").document(it.uid).collection("Reservations")
-                    .document("Reservations").get()
-                    .addOnSuccessListener { doc ->
-                        arrival = doc.get("Dolazak").toString()
-                    }
-
-                createNotificationChannel("Arrival", context)
-                val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-                val currentDateString = dateFormat.format(Date())
-                if (arrival == currentDateString) {
-                    NotificationManagerCompat.from(context).areNotificationsEnabled()
-                    showSimpleNotificationWithTapAction(
-                        this, "Arrival", 1, "Dolazak je danas",
-                        NotificationCompat.PRIORITY_DEFAULT.toString()
-                    )
-                }
-
-                NomadTheme {
-                    Scaffold(
-                        bottomBar = { BottomNavigationBar(navController) }
-                    ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding)) {
-                            NavigationHost(navController = navController)
-                        }
-                    }
-
+            NomadTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    run()
                 }
             }
+
+
+            if(currentUser != null) {
+                currentUser?.let {
+                    db.collection("Users").document(it.uid).collection("Reservations")
+                        .document("Reservations").get()
+                        .addOnSuccessListener { doc ->
+                            arrival = doc.get("Dolazak").toString()
+                        }
+
+                    createNotificationChannel("Arrival", context)
+                    val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+                    val currentDateString = dateFormat.format(Date())
+                    if (arrival == currentDateString) {
+                        NotificationManagerCompat.from(context).areNotificationsEnabled()
+                        showSimpleNotificationWithTapAction(
+                            this, "Arrival", 1, "Dolazak je zakazan danas", "Vaš dolazak je danas! Uživajte u odmoru!",
+                            NotificationCompat.PRIORITY_DEFAULT
+                        )
+                    }
+            }
+                }
+            }
+        }
+    }
+
+@Composable
+fun run() {
+    val navController = rememberNavController()
+    val bottomBarState = remember { mutableStateOf(true) }
+
+    LaunchedEffect(navController) {
+        navController.addOnDestinationChangedListener {_,destination,_ ->
+            bottomBarState.value = when (destination.route) {
+                BottomNavItem.Search.route, BottomNavItem.Map.route, BottomNavItem.Profile.route -> true
+                else -> false
+            }
+        }
+    }
+
+    Scaffold (bottomBar = {  if(bottomBarState.value) {BottomNavigationBar(navController) }}) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            NavigationHost(navController = navController)
+
         }
     }
 }
@@ -205,6 +224,7 @@ fun BottomNavigationBar(navController: NavController) {
 
         items.forEach { item ->
             BottomNavigationItem(
+                alwaysShowLabel = true,
                 selected = currentRoute == item.route,
                 onClick = {
                     navController.navigate(item.route) {
@@ -907,7 +927,8 @@ fun ProfileScreen(navController: NavController) {
                 }
             }
             Button(
-                onClick = {navController.navigate("registration_screen")},
+                onClick = {FirebaseAuth.getInstance().signOut()
+                    navController.navigate("first_screen")},
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(5.dp),
@@ -925,68 +946,79 @@ fun ProfileScreen(navController: NavController) {
 
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Card(
-            modifier = Modifier
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-                .fillMaxWidth()
-                .height(300.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFED8C5E)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = RoundedCornerShape(corner = CornerSize(16.dp))
-        ) {
-            Row {
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(hotelImg),
-                        contentDescription = "Image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(150.dp)
-                            .clip(RoundedCornerShape(corner = CornerSize(16.dp)))
-                            .clickable {
-                                val hotel = hotelName
-                                navController.navigate("hotel_detail_screen/$hotel")
-                            }
-                    )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Text(
-                        text = hotelName,
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
-                        fontFamily = justanotherhand,
-                        color = Color.White,
-                    )
-                    Spacer(modifier = Modifier.height(1.dp))
-                    Text(
-                        text = "Broj gostiju: ${guests}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
-                        fontFamily = justanotherhand,
-                        color = Color.White,
-                        fontSize = 20.sp
-                    )
-                    Text(
-                        text = "Dolazak: ${arrival}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
-                        fontFamily = justanotherhand,
-                        color = Color.White,
-                        fontSize = 20.sp
-                    )
-                    Text(
-                        text = "Odlazak: ${departure}",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
-                        fontFamily = justanotherhand,
-                        color = Color.White,
-                        fontSize = 20.sp
-                    )
+        if(hotelName != "") {
+            Card(
+                modifier = Modifier
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .height(300.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFED8C5E)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(corner = CornerSize(16.dp))
+            ) {
+                Row {
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Image(
+                            painter = rememberAsyncImagePainter(hotelImg),
+                            contentDescription = "Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp)
+                                .clip(RoundedCornerShape(corner = CornerSize(16.dp)))
+                                .clickable {
+                                    val hotel = hotelName
+                                    navController.navigate("hotel_detail_screen/$hotel")
+                                }
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = hotelName,
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
+                            fontFamily = justanotherhand,
+                            color = Color.White,
+                        )
+                        Spacer(modifier = Modifier.height(1.dp))
+                        Text(
+                            text = "Broj gostiju: ${guests}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
+                            fontFamily = justanotherhand,
+                            color = Color.White,
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = "Dolazak: ${arrival}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
+                            fontFamily = justanotherhand,
+                            color = Color.White,
+                            fontSize = 20.sp
+                        )
+                        Text(
+                            text = "Odlazak: ${departure}",
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 8.dp, start = 5.dp),
+                            fontFamily = justanotherhand,
+                            color = Color.White,
+                            fontSize = 20.sp
+                        )
+
+                    }
 
                 }
             }
+        } else{
+            Text(
+                text = "Trenutno nepostoje nikakve rezervacije",
+                fontSize = 30.sp,
+                style = MaterialTheme.typography.headlineMedium.copy(fontFamily = justanotherhand),
+                modifier = Modifier.padding(10.dp)
+
+            )
         }
     }
 }
